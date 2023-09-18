@@ -14,8 +14,8 @@ def resonance(text_a, text_b):
     sentences_b, ranges_b = get_sentences(text_b)
     adj_a = text_rank(sentences_a)
     adj_b = text_rank(sentences_b)
-    salience_a = torch.tensor(terminal_distr(adj_a))
-    salience_b = torch.tensor(terminal_distr(adj_b))
+    salience_a = torch.tensor(terminal_distr(adj_a)) / len(sentences_a)
+    salience_b = torch.tensor(terminal_distr(adj_b)) / len(sentences_a)
 
     vectors_a = torch.tensor(model.encode(sentences_a))
     vectors_b = torch.tensor(model.encode(sentences_b))
@@ -26,10 +26,5 @@ def resonance(text_a, text_b):
     joint_salience = torch.mm(col_b, row_a)
 
     scores_a = (joint_affinity * joint_salience).T.sum(dim=1)
-    print('# Top Sentences from A')
-    for sent, score in sorted(zip(sentences_a, scores_a), key=lambda p: p[1])[-5:]:
-        print(sent)
-    print('# Top Sentences from B')
     scores_b = (joint_affinity * joint_salience).sum(dim=1)
-    for sent, score in sorted(zip(sentences_b, scores_b), key=lambda p: p[1])[-5:]:
-        print(sent)
+    return scores_a.sum()
