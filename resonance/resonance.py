@@ -12,19 +12,20 @@ def cos_sim(xs, ys):
 def resonance(text_a, text_b):
     sentences_a, ranges_a = get_sentences(text_a)
     sentences_b, ranges_b = get_sentences(text_b)
-    adj_a = text_rank(sentences_a)
-    adj_b = text_rank(sentences_b)
-    salience_a = torch.tensor(terminal_distr(adj_a)) / len(sentences_a)
-    salience_b = torch.tensor(terminal_distr(adj_b)) / len(sentences_a)
+    all_vectors = torch.tensor(model.encode(sentences_a + sentences_b))
+    vectors_a = all_vectors[:len(sentences_a)]
+    vectors_b = all_vectors[len(sentences_a):]
+    adj_a = text_rank(vectors_a)
+    adj_b = text_rank(vectors_b)
+    salience_a = torch.tensor(terminal_distr(adj_a))
+    salience_b = torch.tensor(terminal_distr(adj_b))
 
-    vectors_a = torch.tensor(model.encode(sentences_a))
-    vectors_b = torch.tensor(model.encode(sentences_b))
     joint_affinity = cos_sim(vectors_b, vectors_a)
 
     row_a = salience_a.unsqueeze(0)
     col_b = salience_b.reshape(-1, 1)
     joint_salience = torch.mm(col_b, row_a)
 
-    scores_a = (joint_affinity * joint_salience).T.sum(dim=1)
-    scores_b = (joint_affinity * joint_salience).sum(dim=1)
-    return scores_a.sum()
+    scores_a = (joint_affinity * joint_salience).T.mean(dim=1)
+    scores_b = (joint_affinity * joint_salience).mean(dim=1)
+    return scores_a.sum() / len(sentences_a)

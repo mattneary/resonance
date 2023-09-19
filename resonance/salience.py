@@ -5,8 +5,6 @@ import nltk.data
 import nltk
 from scipy import spatial
 
-nltk.download('punkt')
-
 model = SentenceTransformer('all-mpnet-base-v2')
 sent_detector = nltk.data.load('tokenizers/punkt/english.pickle')
 
@@ -24,12 +22,17 @@ def get_sentences(source_text):
     sentences = [source_text[start:end] for start, end in sentence_ranges]
     return sentences, sentence_ranges
 
-def text_rank(sentences):
-    vectors = [model.encode(s) for s in sentences]
-    adjacency = torch.stack([
-        torch.tensor([max(0, 1 - float(spatial.distance.cosine(a, b))) for a in vectors])
-        for b in vectors
-    ]).fill_diagonal_(0.)
+def cos_sim(a, b):
+    sims = a @ b.T
+    a_norm = np.linalg.norm(a, axis=-1)
+    b_norm = np.linalg.norm(b, axis=-1)
+    a_normalized = (sims.T / a_norm.T).T
+    sims = a_normalized / b_norm
+    return sims
+
+def text_rank(vectors):
+    adjacency = torch.tensor(cos_sim(vectors, vectors)).fill_diagonal_(0.)
+    adjacency[adjacency < 0] = 0
     return normalized_adjacency(adjacency)
 
 def terminal_distr(adjacency, initial=None):
